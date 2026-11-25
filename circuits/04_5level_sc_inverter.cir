@@ -1,0 +1,73 @@
+* @title: 5L SC Inverter (TPEL26)
+* @title_zh: 五电平SC逆变器 (TPEL26)
+* @desc: Published 5-level CGSCMLI (Dou et al., IEEE TPEL 2026, DOI: 10.1109/TPEL.2026.3683439)
+* @param: Vin | 200.0 | 48.0 | 400.0 | 20.0 | V | DC input voltage
+* @param: ModIdx | 0.98 | 0.20 | 1.00 | 0.05 | - | SPWM modulation index
+* @param: Fout_Hz | 50.0 | 25.0 | 100.0 | 5.0 | Hz | Output fundamental freq
+* @param: Fsw_Hz | 8000.0 | 2000.0 | 20000.0 | 1000.0 | Hz | Carrier frequency
+* @param: C_uF | 3300.0 | 220.0 | 4700.0 | 220.0 | uF | Flying capacitors C1, C2
+* @param: R_load | 100.0 | 20.0 | 200.0 | 10.0 | ohm | Load resistance
+* @param: L_mH | 5.0 | 0.5 | 20.0 | 1.0 | mH | Load inductance
+* @param: Tstop_ms | 40.0 | 20.0 | 100.0 | 20.0 | ms | Transient stop time
+* @signals: v(vo), v(c1_p,c1_n), v(c2_p,vo), i(V_load_s)
+
+.include power_devices.lib
+
+.param Tsw = '1.0 / {Fsw_Hz}'
+.param Tq1 = 'Tsw / 4.0'
+.param Tq3 = '3.0 * Tsw / 4.0'
+.param Dt = 'Tsw / 8.0'
+
+* --- DC Bus + RC Decoupling Branch (Simulink: R=1 ohm, C=3300 uF) ---
+V_dc n1 0 {Vin}
+R_bus n1 bus_c 1.0
+C_bus bus_c 0 {C_uF}u IC={Vin}
+
+* --- Level-Shifted SPWM Reference & 4 Carriers (TR1..TR4 @ 8 kHz) ---
+V_ref ref 0 SIN(0 {ModIdx} {Fout_Hz})
+V_tr1 tr1 0 PWL(0 0.75 {Tq1} 1.0 {Tq3} 0.5 {Tsw} 0.75) r=0
+V_tr2 tr2 0 PWL(0 0.25 {Tq1} 0.5 {Tq3} 0.0 {Tsw} 0.25) r=0
+V_tr3 tr3 0 PWL(0 -0.25 {Tq1} 0.0 {Tq3} -0.5 {Tsw} -0.25) r=0
+V_tr4 tr4 0 PWL(0 -0.75 {Tq1} -0.5 {Tq3} -1.0 {Tsw} -0.75) r=0
+
+B_xa xa 0 V = (V(ref) > V(tr1)) ? 5 : 0
+B_xb xb 0 V = (V(ref) > V(tr2)) ? 5 : 0
+B_xc xc 0 V = (V(ref) > V(tr3)) ? 5 : 0
+B_xd xd 0 V = (V(ref) > V(tr4)) ? 5 : 0
+
+* Exact SLX Gate Equations (S1..S8)
+B_g1 g1 0 V = ((V(xb) < 2.5) && (V(xd) > 2.5)) ? 5 : 0
+B_g2 g2 0 V = (V(xb) < 2.5) ? 5 : 0
+B_g3 g3 0 V = ((V(xb) < 2.5) && (V(xc) > 2.5)) ? 5 : 0
+B_g4 g4 0 V = ((V(xa) > 2.5) || ((V(xb) < 2.5) && (V(xc) > 2.5))) ? 5 : 0
+B_g5 g5 0 V = ((V(xc) < 2.5) || ((V(xb) > 2.5) && (V(xa) < 2.5))) ? 5 : 0
+B_g6 g6 0 V = (V(xb) > 2.5) ? 5 : 0
+B_g7 g7 0 V = (V(xd) < 2.5) ? 5 : 0
+B_g8 g8 0 V = ((V(xc) < 2.5) || ((V(xa) < 2.5) && (V(xb) > 2.5))) ? 5 : 0
+
+* --- Power Stage (7-Node Graph: n1=Vin+, n2=mid, 0=GND, c2_p=n4, c1_n=n5, c1_p=n6, vo=n7) ---
+X_S2 n2 0 g2 IGBT_DIODE
+X_S4 n1 c1_n g4 IGBT_DIODE
+X_S6 c1_p vo g6 IGBT_DIODE
+X_S7 c2_p n2 g7 IGBT_DIODE
+X_S8 c1_p n1 g8 IGBT_DIODE
+
+X_S1_11 c2_p c1_p g1 BIDIR_IGBT
+X_S3_9 vo n2 g3 BIDIR_IGBT
+X_S5_10 c1_n n2 g5 BIDIR_IGBT
+
+* Cold-start switched capacitors (matching Simulink Setx0=off)
+C1 c1_p c1_n {C_uF}u IC=0
+C2 c2_p vo {C_uF}u IC=0
+
+* Output RL Load (100 ohm, 5 mH)
+V_load_s vo load_a 0
+R_load load_a load_b {R_load}
+L_load load_b 0 {L_mH}m IC=0
+R_gnd_vo vo 0 1e7
+R_gnd_n2 n2 0 1e7
+
+.options method=gear reltol=3e-3 abstol=1e-8 vntol=1e-4 trtol=7
+.tran {Dt} {Tstop_ms}m 0 {Dt} uic
+.save v(vo) v(c1_p) v(c1_n) v(c2_p) i(V_load_s)
+.end

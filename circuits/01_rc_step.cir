@@ -1,0 +1,20 @@
+* @title: RC Step Response
+* @title_zh: 一阶 RC 阶跃响应
+* @desc: First-order RC charging transient (baseline check)
+* @param: Vin | 5.0 | 1.0 | 24.0 | 1.0 | V | Step input voltage
+* @param: R_ohm | 1000.0 | 100.0 | 10000.0 | 100.0 | ohm | Series resistor
+* @param: C_uF | 1.0 | 0.1 | 10.0 | 0.2 | uF | Load capacitor
+* @param: Tstop_ms | 8.0 | 1.0 | 30.0 | 1.0 | ms | Transient stop time
+* @signals: v(out), v(in)
+
+.param Vin_p = {Vin}
+.param R_p = {R_ohm}
+.param C_p = {C_uF}u
+
+V1 in 0 PULSE(0 {Vin_p} 50u 5u 5u 50m 100m)
+R1 in out {R_p}
+C1 out 0 {C_p} IC=0
+
+.tran 20u {Tstop_ms}m uic
+.save v(in) v(out)
+.end

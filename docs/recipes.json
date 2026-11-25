@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0",
+  "target_platform": "CardputerZero (arm64 Linux, 512MB RAM, 320x170 LCD)",
+  "shared_library": "lib/power_devices.lib",
+  "subcircuits": [
+    {
+      "name": "IGBT_DIODE",
+      "pins": ["c", "e", "g"],
+      "behavior": "Conducts c->e when V(g)>2.5V; antiparallel diode conducts e->c; Ron=5m, Rsnub=100k"
+    },
+    {
+      "name": "BIDIR_IGBT",
+      "pins": ["a", "b", "g"],
+      "behavior": "Anti-series common-collector pair; blocks both polarities when V(g)<2.5V"
+    },
+    {
+      "name": "MOSFET_SW",
+      "pins": ["d", "s", "g"],
+      "behavior": "Power MOSFET switch with body diode s->d; Ron=30m"
+    },
+    {
+      "name": "POWER_DIODE",
+      "pins": ["a", "k"],
+      "behavior": "Fast recovery power diode; Rs=20m"
+    }
+  ],
+  "recipes": [
+    {
+      "id": "01_rc_step",
+      "category": "analog_basic",
+      "analysis": "tran",
+      "summary": "First-order RC step response for baseline verification"
+    },
+    {
+      "id": "02_buck_converter",
+      "category": "dc_dc_converter",
+      "analysis": "tran",
+      "summary": "Open-loop PWM Buck converter with LC filter and current sense"
+    },
+    {
+      "id": "03_sc_doubler",
+      "category": "switched_capacitor",
+      "analysis": "tran",
+      "summary": "2x switched-capacitor voltage doubler with loop Ron & surge sensing"
+    },
+    {
+      "id": "04_5level_sc_inverter",
+      "category": "multilevel_inverter",
+      "analysis": "tran",
+      "reference": "Dou et al., IEEE Trans. Power Electron. 2026, DOI: 10.1109/TPEL.2026.3683439",
+      "summary": "11-IGBT 2-SC 5-level LS-SPWM CGSCMLI inverter (+-2Vin, +-Vin, 0)"
+    },
+    {
+      "id": "05_bode_rlc_filter",
+      "category": "ac_frequency_response",
+      "analysis": "ac",
+      "summary": "Second-order LC low-pass filter Bode magnitude sweep (.ac dec)"
+    }
+  ]
+}

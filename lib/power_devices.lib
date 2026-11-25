@@ -1,0 +1,34 @@
+* PocketSpice Reusable Power Electronics & Analog Device Library
+* Include in any project netlist via: .include power_devices.lib
+
+* Unidirectional IGBT + Antiparallel Diode (Collector c, Emitter e, Gate g)
+* Conducts c->e when V(g) > 2.5V; antiparallel diode conducts e->c.
+.subckt IGBT_DIODE c e g
+S_sw c e g 0 SW_IGBT_STD
+D_fw e c D_BODY_STD
+R_snub c e 1e5
+.model SW_IGBT_STD SW(Ron=5e-3 Roff=1e6 Vt=2.5 Vh=-0.2)
+.model D_BODY_STD D(Is=1e-6 Rs=5e-3 N=1.08 Cjo=100p)
+.ends IGBT_DIODE
+
+* Back-to-Back Bidirectional Common-Collector IGBT Pair (Nodes a, b, Gate g)
+* Blocks both polarities when V(g) < 2.5V; conducts bidirectionally when V(g) > 2.5V.
+.subckt BIDIR_IGBT a b g
+X_a mid a g IGBT_DIODE
+X_b mid b g IGBT_DIODE
+.ends BIDIR_IGBT
+
+* Power MOSFET Switch with Body Diode (Drain d, Source s, Gate g)
+.subckt MOSFET_SW d s g
+S_ch d s g 0 SW_MOS_STD
+D_bd s d D_MOS_BODY
+R_ds_leak d s 1e6
+.model SW_MOS_STD SW(Ron=0.03 Roff=1e6 Vt=2.5 Vh=-0.2)
+.model D_MOS_BODY D(Is=2e-6 Rs=0.03 N=1.08 Cjo=150p)
+.ends MOSFET_SW
+
+* Near-Ideal Fast Recovery Power Diode (Anode a, Cathode k)
+.subckt POWER_DIODE a k
+D_p a k D_PWR_STD
+.model D_PWR_STD D(Is=2e-6 Rs=0.02 N=1.05 Cjo=80p)
+.ends POWER_DIODE

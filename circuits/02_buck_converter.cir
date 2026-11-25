@@ -1,0 +1,38 @@
+* @title: Buck Converter (PWM)
+* @title_zh: PWM Buck 降压变换器
+* @desc: Open-loop DC-DC Buck converter transient & ripple
+* @param: Vin | 12.0 | 5.0 | 48.0 | 1.0 | V | DC input voltage
+* @param: Duty | 0.50 | 0.10 | 0.90 | 0.05 | - | PWM duty cycle
+* @param: Fsw_kHz | 50.0 | 10.0 | 200.0 | 10.0 | kHz | Switching frequency
+* @param: L_uH | 100.0 | 22.0 | 470.0 | 22.0 | uH | Filter inductance
+* @param: C_uF | 22.0 | 4.7 | 220.0 | 10.0 | uF | Output capacitance
+* @param: R_load | 10.0 | 2.0 | 100.0 | 2.0 | ohm | Load resistance
+* @signals: v(out), v(sw), i(V_lsense)
+
+.param Tsw = '1.0 / ({Fsw_kHz} * 1000.0)'
+.param Ton = '{Duty} * Tsw'
+.param Dt = 'Tsw / 40.0'
+
+V_in in 0 {Vin}
+V_pwm gate 0 PULSE(0 5 0 20n 20n {Ton} {Tsw})
+
+* High-side switch + freewheeling diode + snubber
+S1 in sw gate 0 SW_MOS
+.model SW_MOS SW(Ron=0.05 Roff=1e5 Vt=2.5 Vh=-0.2)
+D1 0 sw D_SCHOTTKY
+.model D_SCHOTTKY D(Is=2u Rs=0.04 N=1.08 Cjo=150p)
+
+R_snub sw sn1 100
+C_snub sn1 0 1n
+
+* Output LC filter & current sense zero-volt source
+V_lsense sw l_in 0
+L1 l_in out {L_uH}u IC=0
+R_esr out cap_n 0.03
+C1 cap_n 0 {C_uF}u IC=0
+R_load out 0 {R_load}
+
+.options method=gear reltol=2e-3 abstol=1e-9 vntol=1e-5
+.tran {Dt} 2.0m 0 {Dt} uic
+.save v(out) v(sw) i(V_lsense)
+.end

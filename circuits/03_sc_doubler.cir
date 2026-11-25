@@ -1,0 +1,40 @@
+* @title: SC 2x Doubler
+* @title_zh: 2x 开关电容倍压器
+* @desc: 2x Switched-capacitor charge pump (surge & self-balance check)
+* @param: Vin | 12.0 | 3.3 | 24.0 | 1.0 | V | Input voltage
+* @param: Fsw_kHz | 50.0 | 10.0 | 200.0 | 10.0 | kHz | Switching frequency
+* @param: Cfly_uF | 10.0 | 1.0 | 100.0 | 5.0 | uF | Flying capacitor
+* @param: Cout_uF | 47.0 | 10.0 | 220.0 | 10.0 | uF | Output capacitor
+* @param: R_on | 0.20 | 0.05 | 2.00 | 0.05 | ohm | Loop switch Ron
+* @param: R_load | 50.0 | 10.0 | 500.0 | 10.0 | ohm | Load resistance
+* @signals: v(out), v(cf_p,cf_n), i(V_chg)
+
+.param Tsw = '1.0 / ({Fsw_kHz} * 1000.0)'
+.param Thalf = '0.46 * Tsw'
+.param Td = '0.02 * Tsw'
+.param Tdelay2 = 'Thalf + Td'
+.param Dt = 'Tsw / 30.0'
+
+V_in in 0 {Vin}
+V_p1 p1 0 PULSE(0 5 0 20n 20n {Thalf} {Tsw})
+V_p2 p2 0 PULSE(0 5 {Tdelay2} 20n 20n {Thalf} {Tsw})
+
+* Phase 1: Charge Cfly to Vin (in -> cf_p, cf_n -> 0)
+V_chg in in_s 0
+S_c1 in_s cf_p p1 0 SW_SC
+S_c2 cf_n 0 p1 0 SW_SC
+
+* Phase 2: Series boost (cf_n -> in, cf_p -> out)
+S_d1 in cf_n p2 0 SW_SC
+S_d2 cf_p out p2 0 SW_SC
+
+.model SW_SC SW(Ron={R_on} Roff=1e6 Vt=2.5 Vh=-0.2)
+
+C_fly cf_p cf_n {Cfly_uF}u IC=0
+C_out out 0 {Cout_uF}u IC=0
+R_load out 0 {R_load}
+
+.options method=gear reltol=2e-3
+.tran {Dt} 2.5m 0 {Dt} uic
+.save v(out) v(cf_p) v(cf_n) i(V_chg)
+.end
