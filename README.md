@@ -35,7 +35,7 @@
 
 ### 1. 五电平开关电容逆变器论文复刻（[circuits/04_5level_sc_inverter.cir](circuits/04_5level_sc_inverter.cir)）
 复刻自 *IEEE Transactions on Power Electronics* 2026 发表的五电平共地开关电容逆变器（CGSCMLI）：
-> Zhifeng Dou, Haoran Liu, Falong Lu, Yongpeng Shen, Qian Wang, *"A Reverse Design Paradigm: Modular Constraint-Driven Reinforcement Learning for Automated Derivation of Switched-Capacitor Multilevel Inverters"*, *IEEE Trans. Power Electron.*, 2026 (`DOI: 10.1109/TPEL.2026.3683439`)
+> Zhifeng Dou, **Haoran Liu**, Falong Lu, Yongpeng Shen, Qian Wang, *"A Reverse Design Paradigm: Modular Constraint-Driven Reinforcement Learning for Automated Derivation of Switched-Capacitor Multilevel Inverters"*, *IEEE Trans. Power Electron.*, 2026 (`DOI: 10.1109/TPEL.2026.3683439`)
 
 - **CardputerZero 真机 CLI 实测**（`40 ms` 冷启动仿真，`8843` 点）：
   - 求解耗时：**`3299.04 ms`**
